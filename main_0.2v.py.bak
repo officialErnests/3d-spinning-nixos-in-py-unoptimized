@@ -1,0 +1,151 @@
+import os
+import time
+import keyboard
+import math
+width = 100
+heigth = 50
+render_grid = []
+# CLASSES ##
+class vec2:
+    x,y = 0,0
+    def __init__(self,x,y):
+        self.x = x
+        self.y = y
+    def __add__(self,other):
+        return vec2(self.x + other.x, self.y + other.y)
+    def __str__(self):
+        return '(' + str(self.x) + ',' + str(self.y) + ')'
+class vec3:
+    def __init__(self,x,y,z):
+        self.x = x
+        self.y = y
+        self.z = z
+    def __add__(self,other):
+        return vec3(self.x + other.x, self.y + other.y,self.z + other.z)
+    def __sub__(self,other):
+        return vec3(self.x - other.x, self.y - other.y,self.z - other.z)
+    def __mul__(self,other):
+        return vec3(self.x * other, self.y * other,self.z * other)
+    def len(self):
+        return self.x + self.y + self.z
+    def __str__(self):
+        return '(' + str(self.x) + ',' + str(self.y) + ',' + str(self.z) + ')'
+
+class tri:
+    def __init__(self, x1, x2, x3):
+       self.x1 = x1
+       self.x2 = x2
+       self.x3 = x3
+    def __str__(self):
+        return '<' + str(self.x1) + ',' + str(self.x2) + ',' + str(self.x3) + '>'
+class Camera:
+    def __init__(self, start_pos, look_angle):
+        self.pos = start_pos
+        self.angle = look_angle
+        self.velocity = vec3(0,0,0)
+        self.distance = 0
+    def posA(self):
+        return self.pos + vec3(0,math.sin(self.distance)/2,0)
+# RENDERING ##
+def fillGrid():
+    for h in range(heigth):
+        tempRow = []
+        for w in range(width):
+           tempRow.append('_')
+        render_grid.append(tempRow)
+def clearGrid():
+    for I,i in enumerate(render_grid):
+        for B,b in enumerate(i):
+            render_grid[I][B] = '_'
+def renderGrid():
+    os.system('cls')
+    temp = ""
+    for y in render_grid:
+        for x in y:
+            temp += str(x)
+        temp += '\n'
+    print(temp)
+
+fillGrid()
+renderGrid()
+# TRIANGLES ##
+def area(x1: float, y1: float, x2: float, y2: float, x3: float, y3: float):
+    return abs((x1 * (y2 - y3) + x2 * (y3 - y1) 
+                + x3 * (y1 - y2)) / 2.0)
+
+def isInside(x1: float, y1: float, x2: float, y2: float, x3: float, y3: float, x: float, y: float):
+
+    # Calculate area of triangle ABC
+    A = area (x1, y1, x2, y2, x3, y3)
+
+    # Calculate area of triangle PBC 
+    A1 = area (x, y, x2, y2, x3, y3)
+    
+    # Calculate area of triangle PAC 
+    A2 = area (x1, y1, x, y, x3, y3)
+    
+    # Calculate area of triangle PAB 
+    A3 = area (x1, y1, x2, y2, x, y)
+    
+    # Check if sum of A1, A2 and A3 
+    # is same as A
+    if(round(A) == round(A1 + A2 + A3)):
+        return True
+    else:
+        return False
+
+def renderTri(tri,char):
+    for Y,y in enumerate(render_grid):
+        for X,x in enumerate(y):
+            if isInside(tri.x1.x, tri.x1.y, tri.x2.x, tri.x2.y, tri.x3.x, tri.x3.y, X, Y):
+                render_grid[Y][X] = char
+# PROJECTION ##
+def ViewportToCanvas(x, y) :
+  return vec2((x - 0.5) * width, (y - 0.5) * heigth)
+def ProjectVertex(v):
+    if v.z == 0:
+        return vec2(0,0)
+    return ViewportToCanvas(v.x * 1.0 / v.z, v.y * 1.0 / v.z) + vec2(width, heigth)
+def pointTo2D(vec3):
+    return ProjectVertex(vec3 - camera.posA())    
+# TRI RENDER ##
+def renderPoints(p1,p2,p3,char):
+    a = tri(
+        pointTo2D(points[0]),
+        pointTo2D(points[1]),
+        pointTo2D(points[2])
+    )
+    renderTri(a,char)
+
+# INITING VARS ##
+running = True
+camera = Camera(vec3(0,0,0),vec2(0,math.pi))
+# INITING GEOMETRY ##
+points = [
+    vec3(1.0,0.0,10.0),
+    vec3(10.0,0.0,10.0),
+    vec3(1.0,10.0,10.0)
+]
+# MAIN LOOP ##
+tick = 0
+while running:
+    time.sleep(0.1)
+    tick += 1
+    if keyboard.is_pressed('q'):
+        running = False
+        break
+    #movement
+    move_dir = vec3(0.0,0.0,0.0)
+    if keyboard.is_pressed('w'): move_dir.z += 1
+    if keyboard.is_pressed('a'): move_dir.x -= 1
+    if keyboard.is_pressed('s'): move_dir.z -= 1
+    if keyboard.is_pressed('d'): move_dir.x += 1
+    camera.velocity = (camera.velocity + move_dir) * 0.9
+    camera.distance += camera.velocity.len()
+    camera.pos += camera.velocity
+    #render
+    clearGrid()
+    renderPoints(0,1,2,'1')
+    renderGrid()
+    #debug
+    print("Yobi alpha 0.2v", tick)
